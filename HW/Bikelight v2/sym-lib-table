@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name Bikelight-rescue)(type Legacy)(uri ${KIPRJMOD}/Bikelight-rescue.lib)(options "")(descr ""))
+  (lib (name Rovenso)(type Legacy)(uri C:/Users/beat/Documents/eagle/ElectronicBox/library/Rovenso.lib)(options "")(descr ""))
+)
