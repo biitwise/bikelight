@@ -8,9 +8,11 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-static volatile uint8_t prevCaptureVal = 0;
-static volatile uint16_t timer1OvfCnt = 0;
-static volatile uint32_t prevSpeed = 0xffffffff;
+//static volatile uint8_t prevCaptureVal = 0;
+//static volatile uint16_t timer1OvfCnt = 0;
+//static volatile uint32_t prevSpeed = 0xffffffff;
+static volatile uint16_t pulseCount = 0;
+static volatile uint16_t prevPulseCount = 0;
 
 ISR(ADC_vect)
 {
@@ -26,11 +28,13 @@ ISR(ADC_vect)
 
 ISR(TIM1_CAPT_vect)
 {
+pulseCount++;
+/*
 	// Timer input capture routine, change backlight power based on delay
 	uint8_t captureVal = ICR1L;
-	uint32_t speed = (captureVal - prevCaptureVal) + (timer1OvfCnt << 8);
+	volatile uint32_t speed = (captureVal  + (uint32_t)timer1OvfCnt << 8) - prevCaptureVal;
 
-	if(speed > prevSpeed + 100)
+	if(speed > prevSpeed + 10)
 	{
 		//slowing down
 		OCR0A = 0xff;
@@ -40,16 +44,36 @@ ISR(TIM1_CAPT_vect)
 	{
 		//speeding up (reduce back to 30%)
 		OCR0A = 0xff;
-		OCR0B = 0x4f;
+		OCR0B = 0x0f;
 	}
 
 	prevSpeed = speed;
 	prevCaptureVal = captureVal;
+	timer1OvfCnt = 0;*/
 }
 
 ISR(TIM1_OVF_vect)
 {
-	timer1OvfCnt++;
+	if(pulseCount + 1 < prevPulseCount)
+	{
+		//slowing down
+		OCR0A = 0xff;
+		OCR0B = 0xff;
+	}
+	if(pulseCount > prevPulseCount)
+	{
+		//speeding up (reduce back to 30%)
+		OCR0A = 0xff;
+		OCR0B = 0x0f;
+	}
+	prevPulseCount = pulseCount;
+	pulseCount = 0;
+	//timer1OvfCnt++;
+}
+
+ISR(ANA_COMP_vect)
+{
+	pulseCount++;
 }
 
 void initMCU()
@@ -73,7 +97,10 @@ void initTimer()
 {
 	// Previous register for freq. comparison (highest one -> always considered faster that way)
 	// Analog comparator input capture, Internal 1v1 bgap
-	ACSR = (1<<ACBG)|(1<<ACIC);
+	//ACSR = (1<<ACBG)|(1<<ACIC);
+	ACSR = (1<<ACBG)|(1<<ACI)|(2<<ACIS0);//falling edge
+	ACSR = ACSR; //clear eventual interrupts
+	ACSR |= (1<<ACIE); //enable interrupt
 
 	// PWM Output for LED control  (<500Hz for 1MHz) (Timer0)
 	// Frequency input for speed estimation (Timer1)
@@ -85,7 +112,7 @@ void initTimer()
 	ICR1 = 0;
 	// IC enabled, NC enabled, 8 prescaler, FastPWM 8bit
 	TCCR1A = (1<<WGM10);
-	TCCR1B = (1<<ICNC1)|(1<<ICES1)|(1<<WGM12)|(2<<CS10);
+	TCCR1B = (1<<ICNC1)|(1<<ICES1)|(1<<WGM12)|(5<<CS10);
 	// clear pending interrupts timer1
 	TIFR1 = TIFR1;
 	// Input capture and overflow interrupt of timer1
@@ -110,7 +137,7 @@ void initADC()
 	// ADC VoltageMeasurement
 	// Vcc as reference, 1.1V BandGap as measurement, autotrigger by 500Hz Timer1, left adjust
 	ADMUX = (1<<MUX5)|(1<<MUX0);
-	ADCSRB = (1<<ADLAR)|(1<<ADTS2)|(ADTS1);
+	ADCSRB = (1<<ADLAR)|(1<<ADTS2)|(1<<ADTS1);
 	ADCSRA = (1<<ADEN)|(1<<ADATE)|(1<<ADIF)|(1<<ADIE)|(1<<ADPS1)|(1<<ADPS0);
 }
 
