@@ -8,11 +8,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-//static volatile uint8_t prevCaptureVal = 0;
-//static volatile uint16_t timer1OvfCnt = 0;
-//static volatile uint32_t prevSpeed = 0xffffffff;
-static volatile uint16_t pulseCount = 0;
-static volatile uint16_t prevPulseCount = 0;
+static volatile uint16_t prevCaptureVal = 0;
+static volatile uint16_t prevSpeed = 0;
 
 ISR(ADC_vect)
 {
@@ -28,52 +25,30 @@ ISR(ADC_vect)
 
 ISR(TIM1_CAPT_vect)
 {
-pulseCount++;
-/*
-	// Timer input capture routine, change backlight power based on delay
-	uint8_t captureVal = ICR1L;
-	volatile uint32_t speed = (captureVal  + (uint32_t)timer1OvfCnt << 8) - prevCaptureVal;
+	PINA = 1<<PORTA5;
 
-	if(speed > prevSpeed + 10)
+	uint16_t captureVal = ICR1;
+	uint16_t speed = captureVal - prevCaptureVal;
+
+	if(speed > prevSpeed + (prevSpeed >> 6) + (prevSpeed >> 7))
 	{
-		//slowing down
-		OCR0A = 0xff;
+		//OCR0A = 0xff;
 		OCR0B = 0xff;
+		PORTA |= 1<<PORTA4;
 	}
 	else
 	{
-		//speeding up (reduce back to 30%)
-		OCR0A = 0xff;
-		OCR0B = 0x0f;
+		//OCR0A = 0x1f;
+		OCR0B = 0x4f;
+		PORTA &= ~(1<<PORTA4);
 	}
 
-	prevSpeed = speed;
 	prevCaptureVal = captureVal;
-	timer1OvfCnt = 0;*/
+	prevSpeed = speed;
 }
 
 ISR(TIM1_OVF_vect)
 {
-	if(pulseCount + 1 < prevPulseCount)
-	{
-		//slowing down
-		OCR0A = 0xff;
-		OCR0B = 0xff;
-	}
-	if(pulseCount > prevPulseCount)
-	{
-		//speeding up (reduce back to 30%)
-		OCR0A = 0xff;
-		OCR0B = 0x0f;
-	}
-	prevPulseCount = pulseCount;
-	pulseCount = 0;
-	//timer1OvfCnt++;
-}
-
-ISR(ANA_COMP_vect)
-{
-	pulseCount++;
 }
 
 void initMCU()
@@ -88,37 +63,41 @@ void initGPIO()
 	PORTB = (1<<PORTB3)|(1<<PORTB1)|(1<<PORTB0);
 	DDRB = (1<<DDB2);
 	//PORTA (CtrlB, NC, NC, NC, DCDC, FreqIn, NC, NC)
-	DIDR0 = (1<<ADC6D)|(1<<ADC5D)|(1<<ADC4D)|(1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D);
-	PORTA = (1<<PORTA6)|(1<<PORTA5)|(1<<PORTA4)|(1<<PORTA1)|(1<<PORTA0);
-	DDRA = (1<<DDA7)|(1<<DDA3);
+	DIDR0 = (1<<ADC6D)/*|(1<<ADC5D)|(1<<ADC4D)*/|(1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D);
+	PORTA = (1<<PORTA6)/*|(1<<PORTA5)|(1<<PORTA4)*/|(1<<PORTA1)|(1<<PORTA0);
+	DDRA = (1<<DDA7)|(1<<DDA3)|(1<<DDA5)|(1<<DDA4);
 }
 
-void initTimer()
+void initAC()
 {
-	// Previous register for freq. comparison (highest one -> always considered faster that way)
 	// Analog comparator input capture, Internal 1v1 bgap
 	//ACSR = (1<<ACBG)|(1<<ACIC);
-	ACSR = (1<<ACBG)|(1<<ACI)|(2<<ACIS0);//falling edge
+	ACSR = (1<<ACBG)|(1<<ACI)|(2<<ACIS0); //falling edge -> input rising above 1.1V
 	ACSR = ACSR; //clear eventual interrupts
-	ACSR |= (1<<ACIE); //enable interrupt
+	ACSR |= (1<<ACIC); //enable input capture
+}
 
-	// PWM Output for LED control  (<500Hz for 1MHz) (Timer0)
+void initTimer1()
+{
+	
 	// Frequency input for speed estimation (Timer1)
-
 	// Timer1 (freq in / speed)
-	// FastPWM 8bit, NoiseCanceler active, rising edge, 8 prescaler (490 Hz)
+	// Normal mode (16bit), NoiseCanceler active, falling edge, 8 prescaler
 	// Overflow (256) and ICP interrupt enabled
 	// Clear inputCapture register
 	ICR1 = 0;
 	// IC enabled, NC enabled, 8 prescaler, FastPWM 8bit
-	TCCR1A = (1<<WGM10);
-	TCCR1B = (1<<ICNC1)|(1<<ICES1)|(1<<WGM12)|(5<<CS10);
+	TCCR1A = 0;
+	TCCR1B = (1<<ICNC1)|(2<<CS10);
 	// clear pending interrupts timer1
 	TIFR1 = TIFR1;
 	// Input capture and overflow interrupt of timer1
-	TIMSK1 = (1<<ICIE1)|(1<<TOIE1);
+	TIMSK1 = (1<<ICIE1)/*|(1<<TOIE1)*/;
+}
 
-	// Timer0 (PWM)
+void initTimer0()
+{
+	// PWM Output for LED control  (<500Hz for 1MHz) (Timer0)
 	// Phase correct PWM, 8 prescaler (roughly 245 Hz)
 	// 100% (255) for front
 	OCR0A = 0xff;
@@ -146,8 +125,10 @@ int main(void)
 {
 	initMCU();
 	initGPIO();
-	initADC();
-	initTimer();
+	initAC();
+//	initADC();
+	initTimer0();
+	initTimer1();
 
 	sei();
     /* Replace with your application code */
