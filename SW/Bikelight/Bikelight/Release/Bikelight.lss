@@ -1,7 +1,13 @@
 
-AVRASM ver. 2.2.6  C:\Users\beat\Documents\Rovenso\Software\Bikelight\Bikelight\main.asm Tue Mar 12 18:50:07 2019
+AVRASM ver. 2.2.7  C:\Users\beat\Documents\bikelight\SW\Bikelight\Bikelight\main.asm Wed Feb 05 00:10:34 2020
 
 [builtin](2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATtiny_DFP\1.1.102\avrasm\inc\tn24adef.inc'
+C:\Users\beat\Documents\bikelight\SW\Bikelight\Bikelight\main.asm(19): warning: Register r26 already defined by the .DEF directive
+C:\Users\beat\Documents\bikelight\SW\Bikelight\Bikelight\main.asm(20): warning: Register r27 already defined by the .DEF directive
+C:\Users\beat\Documents\bikelight\SW\Bikelight\Bikelight\main.asm(21): warning: Register r28 already defined by the .DEF directive
+C:\Users\beat\Documents\bikelight\SW\Bikelight\Bikelight\main.asm(22): warning: Register r29 already defined by the .DEF directive
+C:\Users\beat\Documents\bikelight\SW\Bikelight\Bikelight\main.asm(25): warning: Register r30 already defined by the .DEF directive
+C:\Users\beat\Documents\bikelight\SW\Bikelight\Bikelight\main.asm(26): warning: Register r31 already defined by the .DEF directive
 [builtin](2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATtiny_DFP\1.1.102\avrasm\inc\tn24adef.inc'
                                  
                                  ;
@@ -690,109 +696,115 @@ AVRASM ver. 2.2.6  C:\Users\beat\Documents\Rovenso\Software\Bikelight\Bikelight\
                                  #define BOARD_VERSION 2
                                  
                                  ; register aliases
-                                 .def		_SPEED_0 = r21
-                                 .def		_SPEED_1 = r24
-                                 .def		_SPEED_2 = r25
-                                 .def		_SPEED_PREV_0 = r20
-                                 .def		_SPEED_PREV_1 = r22
-                                 .def		_SPEED_PREV_2 = r23
+                                 .def		_CAPTURE_L = r20
+                                 .def		_CAPTURE_H = r21
+                                 .def		_CAPTURE_PREV_L = r18
+                                 .def		_CAPTURE_PREV_H = r19
+                                 .def		_SPEED_L = r24
+                                 .def		_SPEED_H = r25
+                                 .def		_SPEED_PREV_L = r22
+                                 .def		_SPEED_PREV_H = r23
+                                 .def		_PULSES_L = r26
+                                 .def		_PULSES_H = r27
+                                 .def		_PULSES_PREV_L = r28
+                                 .def		_PULSES_PREV_H = r29
                                  .def		WR_L = r16
                                  .def		WR_H = r17
-                                 .def		_WR_L = r18
-                                 .def		_WR_H = r19
+                                 .def		_WR_L = r30
+                                 .def		_WR_H = r31
                                  .def		_SREG_BUP = r0
                                  
                                  ; Interrupt jump vector table
                                  .org 0x000
-000000 c034                      	rjmp	RESET
-000001 c033                      	rjmp	EXT_INT0
-000002 c032                      	rjmp	PC_INT0
-000003 c031                      	rjmp	PC_INT1
-000004 c030                      	rjmp	WDT
+000000 c037                      	rjmp	RESET
+000001 c036                      	rjmp	EXT_INT0
+000002 c035                      	rjmp	PC_INT0
+000003 c034                      	rjmp	PC_INT1
+000004 c033                      	rjmp	WDT
 000005 c00b                      	rjmp	TIM1_CAPT
-000006 c02e                      	rjmp	TIM1_COMPA
-000007 c02d                      	rjmp	TIM1_COMPB
-000008 c01d                      	rjmp	TIM1_OVF
-000009 c02b                      	rjmp	TIM0_COMPA
-00000a c02a                      	rjmp	TIM0_COMPB
-00000b c029                      	rjmp	TIM0_OVF
-00000c c028                      	rjmp	ANA_COMP
-00000d c01c                      	rjmp	ADC_CC
-00000e c026                      	rjmp	EE_RDY
-00000f c025                      	rjmp	USI_STR
-000010 c024                      	rjmp	USI_OVF
+000006 c031                      	rjmp	TIM1_COMPA
+000007 c030                      	rjmp	TIM1_COMPB
+000008 c020                      	rjmp	TIM1_OVF
+000009 c02e                      	rjmp	TIM0_COMPA
+00000a c02d                      	rjmp	TIM0_COMPB
+00000b c02c                      	rjmp	TIM0_OVF
+00000c c02b                      	rjmp	ANA_COMP
+00000d c01f                      	rjmp	ADC_CC
+00000e c029                      	rjmp	EE_RDY
+00000f c028                      	rjmp	USI_STR
+000010 c027                      	rjmp	USI_OVF
                                  
                                  ; Timer input capture routine, change backlight power based on delay
                                  TIM1_CAPT:
+                                 	; Save status register
 000011 b60f                      	in		_SREG_BUP, SREG
-                                 ;	in		_SPEED_0, ICR1H ; read data from timer, r5 already contains data
-000012 b554                      	in		_SPEED_0, ICR1L
                                  
-                                 //	subi	_SPEED_PREV_0, -100
-                                 //	sbci	_SPEED_PREV_1, 0xff
-                                 //	sbci	_SPEED_PREV_2, 0xff
+                                 	; For debugging toggle pin A5
+000012 e2e0                      	ldi		_WR_L, (1<<PA5)
+000013 bbe9                      	out		PINA, _WR_L
                                  
-                                 	; Comparison with 24bit
-000013 1754                      	cp		_SPEED_0, _SPEED_PREV_0 ; compare with prev registers
-000014 0786                      	cpc		_SPEED_1, _SPEED_PREV_1
-000015 0797                      	cpc		_SPEED_2, _SPEED_PREV_2
-000016 f428                      	brsh	TIM1_CAPT_SLOW ; branch if _SPEED > _SPEED_PREV
+                                 	; Read data from timer
+000014 b544                      	in		_CAPTURE_L, ICR1L
+000015 b555                      	in		_CAPTURE_H, ICR1H
+                                 	; _SPEED = _CAPTURE - CAPTURE_PREV
+000016 01ca                      	movw	_SPEED_L, _CAPTURE_L
+000017 1b82                      	sub		_SPEED_L, _CAPTURE_PREV_L
+000018 0b93                      	sbc		_SPEED_H, _CAPTURE_PREV_H
                                  
-                                 #if BOARD_VERSION == 1
-                                 #else
-                                 	; speed up
-                                 	; Front 100%
-000017 ef2f                      	ldi		_WR_L, 0xff
-000018 bf26                      	out		OCR0A, _WR_L
+                                 	; if _PULSES_PREV < 20 {} else goto TIM1_CAPT_END
+000019 01fe                      	movw	_WR_L, _PULSES_PREV_L
+00001a 9774                      	sbiw	_WR_L, 20
+00001b f440                      	brcc	TIM1_CAPT_END
+                                 
+                                 	; Comparison with 16bit
+00001c 0786                      	cpc		_SPEED_L, _SPEED_PREV_L
+00001d 0797                      	cpc		_SPEED_H, _SPEED_PREV_H
+00001e f418                      	brsh	TIM1_CAPT_SLOW ; branch if _SPEED > _SPEED_PREV
+                                 
+                                 	; speed up or same
                                  	; Back 30%
-000019 e42f                      	ldi		_WR_L, 0x4f
-00001a bf2c                      	out		OCR0B, _WR_L
-00001b c004                      	rjmp	TIM1_CAPT_END
+00001f e4ef                      	ldi		_WR_L, 0x4f
+000020 bfec                      	out		OCR0B, _WR_L
+000021 c002                      	rjmp	TIM1_CAPT_END
                                  	; slow down
                                  TIM1_CAPT_SLOW:
-                                 	; Front 100%
-00001c ef2f                      	ldi		_WR_L, 0xff
-00001d bf26                      	out		OCR0A, _WR_L
                                  	; Back 100%
-00001e ef2f                      	ldi		_WR_L, 0xff
-00001f bf2c                      	out		OCR0B, _WR_L
-                                 #endif
+000022 efef                      	ldi		_WR_L, 0xff
+000023 bfec                      	out		OCR0B, _WR_L
                                  TIM1_CAPT_END:
-000020 2f45                      	mov		_SPEED_PREV_0, _SPEED_0 ; store to prev registers
-000021 01bc                      	movw	_SPEED_PREV_1, _SPEED_1 ; store to prev registers (word)
-000022 2788                      	clr		_SPEED_1
-000023 2799                      	clr		_SPEED_2
-000024 be0f                      	out		SREG, _SREG_BUP
-000025 9518                      	reti
+                                 	; 
+000024 01bc                      	movw	_SPEED_PREV_L, _SPEED_L
+000025 019a                      	movw	_CAPTURE_PREV_L, _CAPTURE_L
+000026 9611                      	adiw	_PULSES_L, 1
+                                 	; restore SREG
+000027 be0f                      	out		SREG, _SREG_BUP
+000028 9518                      	reti
                                  
                                  ; Timer1 overflow interrupt, increment counter for 32 bit value
                                  TIM1_OVF:
                                  	; Use to increase max time to 0.5s roughly (16bit value)
-000026 b60f                      	in		_SREG_BUP, SREG
-000027 9601                      	adiw	_SPEED_1, 1
-000028 be0f                      	out		SREG, _SREG_BUP
-000029 9518                      	reti
+000029 b60f                      	in		_SREG_BUP, SREG
+00002a 9601                      	adiw	_SPEED_L, 1
+00002b be0f                      	out		SREG, _SREG_BUP
+00002c 9518                      	reti
                                  
                                  ADC_CC:
                                  	; read in supply voltage based on value for 1.1V Bgap
                                  	; go to low power mode if ADCH > 94 (left adjusted) -> Vin < 3
-00002a b60f                      	in		_SREG_BUP, SREG
-00002b b125                      	in		_WR_L, ADCH
-00002c 352e                      	cpi		_WR_L, 94
-00002d f028                      	brlo	ADC_END
-                                 #if BOARD_VERSION == 1
-                                 #else
+00002d b60f                      	in		_SREG_BUP, SREG
+00002e b1e5                      	in		_WR_L, ADCH
+00002f 35ee                      	cpi		_WR_L, 94
+000030 f028                      	brlo	ADC_END
                                  	; reduce pwm for low power mode
-00002e e125                      	ldi		_WR_L, 0x15
-00002f bf26                      	out		OCR0A, _WR_L
-000030 bf2c                      	out		OCR0B, _WR_L
-                                 #endif
-000031 be0f                      	out		SREG, _SREG_BUP
-000032 9518                      	reti
+000031 e1e5                      	ldi		_WR_L, 0x15
+000032 bfe6                      	out		OCR0A, _WR_L
+000033 bfec                      	out		OCR0B, _WR_L
+000034 be0f                      	out		SREG, _SREG_BUP
+000035 9518                      	reti
                                  ADC_END: 
                                  	; Do nothing (normal mode)
-000033 be0f                      	out		SREG, _SREG_BUP
-000034 9518                      	reti
+000036 be0f                      	out		SREG, _SREG_BUP
+000037 9518                      	reti
                                  
                                  EXT_INT0:
                                  PC_INT0:
@@ -809,105 +821,104 @@ AVRASM ver. 2.2.6  C:\Users\beat\Documents\Rovenso\Software\Bikelight\Bikelight\
                                  USI_OVF:
                                  
                                  RESET:
-                                 	; Initialize Stack
-000035 ed0f                      	ldi		WR_L, low(RAMEND)
-000036 bf0d                      	out		SPL, WR_L
+                                 	; Initialize Stack (not enough memory for SPH)
+000038 ed0f                      	ldi		WR_L, low(RAMEND)
+000039 bf0d                      	out		SPL, WR_L
                                  
                                  	; Power
-                                 #if BOARD_VERSION == 1
-                                 #else
                                  	; Power reduction (serial interface)
-000037 e002                      	ldi		WR_L, (1<<PRUSI)
-                                 #endif
+00003a e002                      	ldi		WR_L, (1<<PRUSI)
+00003b b900                      	out		PRR, WR_L
                                  
                                  	; GPIO
-                                 #if BOARD_VERSION == 1
-                                 #else
                                  	; Define PORTB (!Reset, CtrlF, NC, NC)
-000038 e00b                      	ldi		WR_L, (1<<PB3)|(1<<PB1)|(1<<PB0)
-000039 e014                      	ldi		WR_H, (1<<DDB2)
-00003a bb08                      	out		PORTB, WR_L
-00003b bb17                      	out		DDRB, WR_H
+00003c e00b                      	ldi		WR_L, (1<<PB3)|(1<<PB1)|(1<<PB0)
+00003d e014                      	ldi		WR_H, (1<<DDB2)
+00003e bb08                      	out		PORTB, WR_L
+00003f bb17                      	out		DDRB, WR_H
                                  	; Define PORTA (CtrlB, NC, NC, NC, DCDC, FreqIn, NC, NC)
-00003c e707                      	ldi		WR_L, (1<<ADC6D)|(1<<ADC5D)|(1<<ADC4D)|(1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)
-00003d b901                      	out		DIDR0, WR_L
-00003e e703                      	ldi		WR_L, (1<<PA6)|(1<<PA5)|(1<<PA4)|(1<<PA1)|(1<<PA0)
-00003f e818                      	ldi		WR_H, (1<<DDA7)|(1<<DDA3)
-000040 bb0b                      	out		PORTA, WR_L
-000041 bb1a                      	out		DDRA, WR_H
-                                 #endif
+000040 e407                      	ldi		WR_L, (1<<ADC6D)|(1<<ADC2D)|(1<<ADC1D)|(1<<ADC0D)
+000041 b901                      	out		DIDR0, WR_L
+000042 e403                      	ldi		WR_L, (1<<PA6)|(1<<PA1)|(1<<PA0)
+000043 eb18                      	ldi		WR_H, (1<<DDA7)|(1<<DDA5)|(1<<DDA4)|(1<<DDA3)
+000044 bb0b                      	out		PORTA, WR_L
+000045 bb1a                      	out		DDRA, WR_H
+                                 
+                                 	; Analog Comparator
+                                 	; Analog comparator input capture, Internal 1v1 bgap falling edge -> input rising above 1.1V
+000046 e502                      	ldi		WR_L, (1<<ACBG)|(1<<ACI)|(2<<ACIS0)
+000047 b908                      	out		ACSR, WR_L
+                                 	; Erase pending interrupts
+000048 b108                      	in		WR_L, ACSR
+000049 b908                      	out		ACSR, WR_L
+                                 	; Enable input capture on Timer 1
+00004a 9a42                      	sbi		ACSR, ACIC
                                  
                                  	; Timer
-                                 #if BOARD_VERSION == 1
-                                 #else
-                                 	; Previous register for freq. comparison (highest one -> always considered faster that way)
-                                 	; Analog comparator input capture, Internal 1v1 bgap, 
-000042 e404                      	ldi		WR_L, (1<<ACBG)|(1<<ACIC)
-000043 b908                      	out		ACSR, WR_L
-                                 
-                                 	; PWM Output for LED control  (<500Hz for 1MHz) (Timer0)
-                                 	; Timer1 for frequency input
-                                 
                                  	; Timer1 (freq in / speed)
-                                 	; FastPWM 8bit, NoiseCanceler active, rising edge, 8 prescaler (490 Hz)
-                                 	; Overflow (256) and ICP interrupt enabled
+                                 	; Normal mode (16bit), NoiseCanceler active, falling edge, 8 prescaler (2 Hz)
+                                 	; Overflow (2^16) and ICP interrupt enabled
+                                 
                                  	; Init with prev slow speed
-000044 ef7f                      	ldi		_SPEED_PREV_2, 0xff
+00004b ef7f                      	ldi		_SPEED_PREV_H, 0xff
                                  	; Clear inputCapture register
-000045 e010                      	ldi		WR_H, 0x00
-000046 bd15                      	out		ICR1H, WR_H
-000047 bd14                      	out		ICR1L, WR_H
+00004c 2700                      	clr		WR_L
+00004d bd05                      	out		ICR1H, WR_L
+00004e bd04                      	out		ICR1L, WR_L
                                  	; IC enabled, NC enabled, 8 prescaler, FastPWM 8bit
-000048 e001                      	ldi		WR_L, (1<<WGM10)
-000049 bd0f                      	out		TCCR1A, WR_L
-00004a ec0a                      	ldi		WR_L, (1<<ICNC1)|(1<<ICES1)|(1<<WGM12)|(2<<CS10)
-00004b bd0e                      	out		TCCR1B, WR_L
+00004f e000                      	ldi		WR_L, 0x00
+000050 bd0f                      	out		TCCR1A, WR_L
+000051 e802                      	ldi		WR_L, (1<<ICNC1)|(2<<CS10)
+000052 bd0e                      	out		TCCR1B, WR_L
                                  	; clear pending interrupts timer1
-00004c b10b                      	in		WR_L, TIFR1
-00004d b90b                      	out		TIFR1, WR_L
+000053 b10b                      	in		WR_L, TIFR1
+000054 b90b                      	out		TIFR1, WR_L
                                  	; Input capture and overflow interrupt of timer1
-00004e e201                      	ldi		WR_L, (1<<ICIE1)|(1<<TOIE1)
-00004f b90c                      	out		TIMSK1, WR_L
+000055 e201                      	ldi		WR_L, (1<<ICIE1)|(1<<TOIE1)
+000056 b90c                      	out		TIMSK1, WR_L
                                  
                                  	; Timer0 (PWM)
-                                 	; Phase correct PWM, 8 prescaler (roughly 245 Hz)
+                                 	; PWM Output for LED control (roughly 245 Hz for 1 MHz)
+                                 	; Phase correct PWM, 8 prescaler
+                                 
                                  	; 100% (255) for front
-000050 ef0f                      	ldi		WR_L, 0xff
-000051 bf06                      	out		OCR0A, WR_L
+000057 ef0f                      	ldi		WR_L, 0xff
+000058 bf06                      	out		OCR0A, WR_L
                                  	; 31% (79) for back
-000052 e40f                      	ldi		WR_L, 0x4f
-000053 bf0c                      	out		OCR0B, WR_L
+000059 e40f                      	ldi		WR_L, 0x4f
+00005a bf0c                      	out		OCR0B, WR_L
                                  	; no interrupts
-000054 e000                      	ldi		WR_L, 0x00
-000055 bf09                      	out		TIMSK0, WR_L
+00005b e000                      	ldi		WR_L, 0x00
+00005c bf09                      	out		TIMSK0, WR_L
                                  	; PWM output A and B enabled, 8bit phase correct PWM
-000056 ea01                      	ldi		WR_L, (2<<COM0A0)|(2<<COM0B0)|(1<<WGM00)
-000057 bf00                      	out		TCCR0A, WR_L
+00005d ea01                      	ldi		WR_L, (2<<COM0A0)|(2<<COM0B0)|(1<<WGM00)
+00005e bf00                      	out		TCCR0A, WR_L
                                  	; 8 prescaler
-000058 e002                      	ldi		WR_L, (2<<CS00)
-000059 bf03                      	out		TCCR0B, WR_L
-                                 #endif
+00005f e002                      	ldi		WR_L, (2<<CS00)
+000060 bf03                      	out		TCCR0B, WR_L
                                  
                                  	; ADC VoltageMeasurement
                                  	; Vcc as reference, 1.1V BandGap as measurement, autotrigger by 500Hz Timer1, left adjust
-                                 #if BOARD_VERSION == 1
-                                 #endif
-00005a e201                      	ldi		WR_L, (1<<MUX5)|(1<<MUX0)
-00005b b907                      	out		ADMUX, WR_L
-00005c e105                      	ldi		WR_L, (1<<ADLAR)|(1<<ADTS2)|(ADTS1)
-00005d b903                      	out		ADCSRB, WR_L
-00005e eb0b                      	ldi		WR_L, (1<<ADEN)|(1<<ADATE)|(1<<ADIF)|(1<<ADIE)|(1<<ADPS1)|(1<<ADPS0)
-00005f b906                      	out		ADCSRA, WR_L
+000061 e201                      	ldi		WR_L, (1<<MUX5)|(1<<MUX0)
+000062 b907                      	out		ADMUX, WR_L
+000063 e105                      	ldi		WR_L, (1<<ADLAR)|(1<<ADTS2)|(ADTS1)
+000064 b903                      	out		ADCSRB, WR_L
+000065 eb0b                      	ldi		WR_L, (1<<ADEN)|(1<<ADATE)|(1<<ADIF)|(1<<ADIE)|(1<<ADPS1)|(1<<ADPS0)
+000066 b906                      	out		ADCSRA, WR_L
                                  
-000060 9478                      	sei
+                                 	; Enable interrupts
+000067 9478                      	sei
                                  
+                                 	; Main loop (empty or sleep)
                                  MAIN:
-000061 e200                      	ldi		WR_L, (1<<SE)
-000062 bf05                      	out		MCUCR, WR_L
-000063 9588                      	sleep
-000064 2700                      	clr		WR_L
-000065 bf05                      	out		MCUCR, WR_L
-000066 cffa                          rjmp	MAIN
+000068 cfff                      	rjmp	MAIN
+                                 
+                                 ;	ldi		WR_L, (1<<SE)
+                                 ;	out		MCUCR, WR_L
+                                 ;	sleep
+                                 ;	clr		WR_L
+                                 ;	out		MCUCR, WR_L
+                                 ;   rjmp	MAIN
 
 
 RESOURCE USE INFORMATION
@@ -927,37 +938,37 @@ counted separately from r26..r31 here.
 "ATtiny24A" register use summary:
 x  :   0 y  :   0 z  :   0 r0 :   7 r1 :   0 r2 :   0 r3 :   0 r4 :   0 
 r5 :   0 r6 :   0 r7 :   0 r8 :   0 r9 :   0 r10:   0 r11:   0 r12:   0 
-r13:   0 r14:   0 r15:   0 r16:  39 r17:   7 r18:  13 r19:   0 r20:   2 
-r21:   3 r22:   2 r23:   2 r24:   4 r25:   2 r26:   0 r27:   0 r28:   0 
-r29:   0 r30:   0 r31:   0 
-Registers used: 10 out of 35 (28.6%)
+r13:   0 r14:   0 r15:   0 r16:  41 r17:   4 r18:   2 r19:   1 r20:   3 
+r21:   1 r22:   2 r23:   2 r24:   5 r25:   2 r26:   1 r27:   0 r28:   1 
+r29:   0 r30:  13 r31:   0 
+Registers used: 14 out of 35 (40.0%)
 
 "ATtiny24A" instruction use summary:
-.lds  :   0 .sts  :   0 adc   :   0 add   :   0 adiw  :   1 and   :   0 
+.lds  :   0 .sts  :   0 adc   :   0 add   :   0 adiw  :   2 and   :   0 
 andi  :   0 asr   :   0 bclr  :   0 bld   :   0 brbc  :   0 brbs  :   0 
-brcc  :   0 brcs  :   0 break :   0 breq  :   0 brge  :   0 brhc  :   0 
+brcc  :   1 brcs  :   0 break :   0 breq  :   0 brge  :   0 brhc  :   0 
 brhs  :   0 brid  :   0 brie  :   0 brlo  :   1 brlt  :   0 brmi  :   0 
 brne  :   0 brpl  :   0 brsh  :   1 brtc  :   0 brts  :   0 brvc  :   0 
 brvs  :   0 bset  :   0 bst   :   0 cbi   :   0 cbr   :   0 clc   :   0 
-clh   :   0 cli   :   0 cln   :   0 clr   :   3 cls   :   0 clt   :   0 
-clv   :   0 clz   :   0 com   :   0 cp    :   1 cpc   :   2 cpi   :   1 
-cpse  :   0 dec   :   0 eor   :   0 icall :   0 ijmp  :   0 in    :   6 
-inc   :   0 ld    :   0 ldd   :   0 ldi   :  27 lds   :   0 lpm   :   0 
-lsl   :   0 lsr   :   0 mov   :   1 movw  :   1 neg   :   0 nop   :   0 
-or    :   0 ori   :   0 out   :  33 pop   :   0 push  :   0 rcall :   0 
-ret   :   0 reti  :   4 rjmp  :  19 rol   :   0 ror   :   0 sbc   :   0 
-sbci  :   0 sbi   :   0 sbic  :   0 sbis  :   0 sbiw  :   0 sbr   :   0 
+clh   :   0 cli   :   0 cln   :   0 clr   :   1 cls   :   0 clt   :   0 
+clv   :   0 clz   :   0 com   :   0 cp    :   0 cpc   :   2 cpi   :   1 
+cpse  :   0 dec   :   0 eor   :   0 icall :   0 ijmp  :   0 in    :   8 
+inc   :   0 ld    :   0 ldd   :   0 ldi   :  24 lds   :   0 lpm   :   0 
+lsl   :   0 lsr   :   0 mov   :   0 movw  :   4 neg   :   0 nop   :   0 
+or    :   0 ori   :   0 out   :  32 pop   :   0 push  :   0 rcall :   0 
+ret   :   0 reti  :   4 rjmp  :  19 rol   :   0 ror   :   0 sbc   :   1 
+sbci  :   0 sbi   :   1 sbic  :   0 sbis  :   0 sbiw  :   1 sbr   :   0 
 sbrc  :   0 sbrs  :   0 sec   :   0 seh   :   0 sei   :   1 sen   :   0 
-ser   :   0 ses   :   0 set   :   0 sev   :   0 sez   :   0 sleep :   1 
-spm   :   0 st    :   0 std   :   0 sts   :   0 sub   :   0 subi  :   0 
+ser   :   0 ses   :   0 set   :   0 sev   :   0 sez   :   0 sleep :   0 
+spm   :   0 st    :   0 std   :   0 sts   :   0 sub   :   1 subi  :   0 
 swap  :   0 tst   :   0 wdr   :   0 
-Instructions used: 16 out of 105 (15.2%)
+Instructions used: 18 out of 105 (17.1%)
 
 "ATtiny24A" memory use summary [bytes]:
 Segment   Begin    End      Code   Data   Used    Size   Use%
 ---------------------------------------------------------------
-[.cseg] 0x000000 0x0000ce    206      0    206    2048  10.1%
+[.cseg] 0x000000 0x0000d2    210      0    210    2048  10.3%
 [.dseg] 0x000060 0x000060      0      0      0     128   0.0%
 [.eseg] 0x000000 0x000000      0      0      0     128   0.0%
 
-Assembly complete, 0 errors, 0 warnings
+Assembly complete, 0 errors, 6 warnings
